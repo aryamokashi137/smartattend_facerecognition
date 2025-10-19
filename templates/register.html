@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Registration</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Ionicons (used for icons in navigation) -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    
+    <!-- Custom Styles (Shared CSS) -->
+    <style>
+        /* Custom background and font */
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Updated: Lighter, almost white background gradient for a cleaner look */
+            background: linear-gradient(135deg, #ffffff 0%, #f3f6fa 100%);
+            min-height: 100vh;
+        }
+
+        /* Utility for the dark history panel header */
+        .history-header {
+            background-color: #2c3e50; /* Dark slate/navy */
+        }
+
+        /* Utility for the blue gradient background of the scanner panel (used for registration now) */
+        .scanner-header-bg {
+            background: linear-gradient(90deg, #1e3a8a, #06b6d4);
+        }
+
+        /* Utility for the green registration header (kept for potential use in other files, but overridden below) */
+        .register-header-bg {
+            background: linear-gradient(90deg, #059669, #10b981); 
+        }
+
+        /* Hide scrollbars for a cleaner look */
+        ::-webkit-scrollbar {
+            display: none;<script>
+const video = document.getElementById('video');
+const cameraButton = document.getElementById('openCameraBtn');
+const placeholder = document.getElementById('placeholder');
+const registrationForm = document.getElementById('registrationForm');
+const photoCanvas = document.getElementById('photoCanvas');
+const photoCtx = photoCanvas.getContext('2d');
+const overlayCanvas = document.getElementById('overlayCanvas');
+const overlayCtx = overlayCanvas.getContext('2d');
+const closeCameraBtn = document.getElementById('closeCameraBtn');
+
+let stream = null;
+let detectionInterval = null;
+let isCameraOpen = false;
+let isPhotoCaptured = false;
+let capturedImageBlob = null;
+
+// ✅ Unified camera button handler
+cameraButton.addEventListener('click', async () => {
+    if (isPhotoCaptured) {
+        window.location.reload();
+        return;
+    }
+
+    if (isCameraOpen) {
+        capturePhoto();
+    } else {
+        await openCamera();
+    }
+});
+
+// ✅ Open the webcam and show video preview
+async function openCamera() {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        video.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+        isCameraOpen = true;
+
+        // Wait until video metadata is ready
+        video.onloadedmetadata = () => {
+            video.play();
+            overlayCanvas.width = video.videoWidth;
+            overlayCanvas.height = video.videoHeight;
+            photoCanvas.width = video.videoWidth;
+            photoCanvas.height = video.videoHeight;
+        };
+
+        // Update buttons
+        cameraButton.innerHTML = `<ion-icon name="camera-outline" class="text-xl"></ion-icon><span>Capture Photo</span>`;
+        closeCameraBtn.classList.remove('hidden');
+
+        // Start face detection
+        detectionInterval = setInterval(detectFaceInStream, 600);
+    } catch (err) {
+        console.error("Camera error:", err);
+        alert("Could not access camera. Please allow webcam permissions.");
+    }
+}
+
+// ✅ Capture photo from video
+function capturePhoto() {
+    if (!isCameraOpen) {
+        alert("Camera is not ready yet.");
+        return;
+    }
+
+    isPhotoCaptured = true;
+    clearInterval(detectionInterval);
+    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+    photoCtx.drawImage(video, 0, 0, photoCanvas.width, photoCanvas.height);
+
+    // Stop camera stream
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+    }
+
+    // Save captured image
+    photoCanvas.toBlob(blob => {
+        capturedImageBlob = blob;
+        console.log("✅ Captured image blob:", blob ? blob.size : 0, "bytes");
+    }, 'image/jpeg', 0.95);
+
+    // Switch UI to preview
+    video.classList.add('hidden');
+    photoCanvas.classList.remove('hidden');
+    closeCameraBtn.classList.add('hidden');
+    cameraButton.innerHTML = `<ion-icon name="refresh-outline" class="text-xl"></ion-icon><span>Retake Photo</span>`;
+    isCameraOpen = false;
+}
+
+// ✅ Close camera manually
+closeCameraBtn.addEventListener('click', () => {
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+    }
+    clearInterval(detectionInterval);
+    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+    video.classList.add('hidden');
+    photoCanvas.classList.add('hidden');
+    placeholder.classList.remove('hidden');
+    closeCameraBtn.classList.add('hidden');
+    cameraButton.innerHTML = `<ion-icon name="camera-outline" class="text-xl"></ion-icon><span>Open Camera</span>`;
+    isCameraOpen = false;
+    isPhotoCaptured = false;
+    capturedImageBlob = null;
+});
+
+// ✅ Detect face during preview
+async function detectFaceInStream() {
+    if (!video.srcObject || isPhotoCaptured) return;
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = video.videoWidth;
+    tempCanvas.height = video.videoHeight;
+    tempCanvas.getContext('2d').drawImage(video, 0, 0);
+
+    const blob = await new Promise(r => tempCanvas.toBlob(r, 'image/jpeg'));
+    const formData = new FormData();
+    formData.append('frame', blob, 'detect.jpg');
+
+    const res = await fetch('/detect_face', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+    if (res.ok && data.status === 'success') {
+        const [x, y, w, h] = data.box;
+        overlayCtx.strokeStyle = '#34d399';
+        overlayCtx.lineWidth = 3;
+        overlayCtx.strokeRect(x, y, w, h);
+    }
+}
+
+// ✅ Handle form submission
+registrationForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    if (!isPhotoCaptured) {
+        alert("No photo captured. Please open the camera and capture a photo first.");
+        return;
+    }
+
+    if (!capturedImageBlob) {
+        alert("Photo not captured or camera not ready yet.");
+        return;
+    }
+
+    const formData = new FormData(registrationForm);
+    formData.append('face', capturedImageBlob, 'face.jpg');
+
+    const res = await fetch('/register', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    alert(data.message);
+    if (res.ok) window.location.href = '/';
+});
+</script>
+
+        }
+
+        /* Style for custom input wrapper, mimicking Tailwind classes */
+        .custom-input {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem; /* p-3 */
+            border: 1px solid #d1d5db; /* border-gray-300 */
+            border-radius: 0.5rem; /* rounded-lg */
+            background-color: white; /* bg-white */
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+        }
+
+        .custom-input input, .custom-input select {
+            flex-grow: 1; /* flex-grow */
+            outline: none;
+            background-color: transparent;
+            color: #374151; /* text-gray-700 */
+        }
+
+        /* Styling for the face capture box border */
+        .face-capture-box {
+            /* Changed border color to blue-200 to match blue theme, and solid for a cleaner boundary */
+            border: 1px solid #bfdbfe; /* Blue-200 solid border */
+        }
+    </style>
+    
+    <!-- Tailwind Configuration (for custom colors) -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // Custom colors used in the stat cards
+                        'card-blue': '#3b82f6',
+                        'card-green': '#10b981',
+                        'card-purple': '#8b5cf6',
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- HEADER (Shared across all pages) -->
+        <header class="flex items-center justify-between p-4 bg-white rounded-xl shadow-lg mb-8">
+            <div class="flex items-center space-x-3">
+                <!-- Logo/Icon (Blue Star/Sparkle icon) -->
+                <div class="p-2 bg-blue-600 rounded-full">
+                    <!-- UPDATED LOGO -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white">
+                        <path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path><path d="M12 10v4"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-gray-800">SmartAttend</h1>
+                    <!-- UPDATED SUB-HEADER -->
+                    <p class="text-sm text-gray-500">AI Based Face Recognition Attendance System</p>
+                </div>
+            </div>
+            
+            <!-- Navigation Buttons (Links to other HTML files) -->
+            <nav class="flex space-x-2">
+                <!-- Register Button (Active Page) -->
+                <a href="/register" class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-150 shadow-md">
+                    <ion-icon name="person-add-outline" class="text-xl"></ion-icon>
+                    <span class="font-semibold hidden sm:inline">Register</span>
+                </a>
+
+                <!-- Scan Face Button (Link) -->
+                <a href="{{ url_for('scan') }}" class="flex items-center space-x-2 px-4 py-2 bg-white text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition duration-150 shadow-md">
+                    <!-- UPDATED ICON -->
+                    <ion-icon name="camera-outline" class="text-xl"></ion-icon>
+                    <span class="font-semibold hidden sm:inline">Scan</span>
+                </a>
+                
+                <!-- History Button (Link) -->
+                <a href="{{ url_for('index') }}" class="flex items-center space-x-2 px-4 py-2 bg-white text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition duration-150 shadow-md">
+                    <ion-icon name="time-outline" class="text-xl"></ion-icon>
+                    <span class="font-semibold hidden sm:inline">History</span>
+                </a>
+            </nav>
+        </header>
+
+        <!-- MAIN CONTENT AREA: Registration Form -->
+        <main>
+            <div class="p-6 md:p-12 rounded-xl shadow-2xl"> 
+                <div class="max-w-4xl mx-auto"> <!-- Increased max-width for better two-column display -->
+                    
+                    <!-- Registration Header (NOW BLUE GRADIENT) -->
+                    <div class="scanner-header-bg text-white p-6 rounded-t-xl flex items-center space-x-4">
+                        <!-- Icon styled inside a light rounded box -->
+                        <div class="p-3 bg-white/20 rounded-xl">
+                            <ion-icon name="person-circle-outline" class="text-3xl"></ion-icon>
+                        </div>
+                        <div>
+                            <span class="text-2xl font-bold block leading-none">Student Registration</span>
+                            <span class="text-sm font-light opacity-90">Register new student with face identification</span>
+                        </div>
+                    </div>
+                    
+                    <form id="registrationForm" class="bg-white p-6 rounded-b-xl border-t-2 border-gray-100">
+                        <!-- TWO-COLUMN LAYOUT CONTAINER -->
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            
+                            <!-- LEFT COLUMN: Personal Information Fields (EXPANDED) -->
+                            <div>
+                                <h3 class="font-semibold text-gray-700 mb-4 flex items-center space-x-2">
+                                    <ion-icon name="document-text-outline" class="text-xl"></ion-icon>
+                                    <span>Personal Information</span>
+                                </h3>
+                                
+                                <div class="space-y-4">
+                                    <!-- 1. PRN Input -->
+                                    <div>
+                                        <label for="prn" class="block text-sm font-medium text-gray-700 mb-1">PRN (Permanent Registration Number) <span class="text-red-500">*</span></label>
+                                        <div class="custom-input">
+                                            <ion-icon name="key-outline" class="text-gray-400 mr-2 text-lg"></ion-icon>
+                                            <input type="text" id="prn" name="prn" placeholder="e.g., 2021012345" class="text-gray-700 focus:ring-0" required>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 2. Full Name Input -->
+                                    <div>
+                                        <label for="fullName" class="block text-sm font-medium text-gray-700 mb-1">Full Name <span class="text-red-500">*</span></label>
+                                        <div class="custom-input">
+                                            <ion-icon name="person-outline" class="text-gray-400 mr-2 text-lg"></ion-icon>
+                                            <input type="text" id="fullName" name="full_name" placeholder="Enter full name" class="text-gray-700 focus:ring-0" required>
+                                        </div>
+                                    </div>
+
+                                    <!-- 3. Email Address Input -->
+                                    <div>
+                                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">College Email Address <span class="text-red-500">*</span></label>
+                                        <div class="custom-input">
+                                            <ion-icon name="mail-outline" class="text-gray-400 mr-2 text-lg"></ion-icon>
+                                            <input type="email" id="email" name="email" placeholder="student.prn@viit.ac.in" class="text-gray-700 focus:ring-0" required>
+                                        </div>
+                                    </div>
+
+                                    <!-- 4. Phone Number Input -->
+                                    <div>
+                                        <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number <span class="text-red-500">*</span></label>
+                                        <div class="custom-input">
+                                            <ion-icon name="call-outline" class="text-gray-400 mr-2 text-lg"></ion-icon>
+                                        <input type="tel" id="phone" name="phone" placeholder="+919876543210" class="text-gray-700 focus:ring-0" required pattern="\+91[1-9][0-9]{9}" title="Phone number must be in the format +91XXXXXXXXXX">
+                                        </div>
+                                    </div>
+
+                                    <!-- 5. Department Select -->
+                                    <div>
+                                        <label for="department" class="block text-sm font-medium text-gray-700 mb-1">Department <span class="text-red-500">*</span></label>
+                                        <div class="custom-input">
+                                            <ion-icon name="briefcase-outline" class="text-gray-400 mr-2 text-lg"></ion-icon>
+                                            <select id="department" name="department" class="text-gray-700 focus:ring-0 appearance-none cursor-pointer" required>
+                                                <option value="" disabled selected>Select Department</option>
+                                                <option value="IT">Information Technology</option>
+                                                <option value="CS">Computer Science</option>
+                                                <option value="EE">Electrical Engineering</option>
+                                                <option value="Business">Business Administration</option>
+                                                <option value="Arts">Liberal Arts</option>
+                                            </select>
+                                            <!-- Custom chevron for select -->
+                                            <ion-icon name="chevron-down-outline" class="text-gray-400 text-sm ml-2 pointer-events-none"></ion-icon>
+                                        </div>
+                                    </div>
+
+                                    <!-- 6. Semester Select (New Field) -->
+                                    <div>
+                                        <label for="semester" class="block text-sm font-medium text-gray-700 mb-1">Semester <span class="text-red-500">*</span></label>
+                                        <div class="custom-input">
+                                            <ion-icon name="calendar-outline" class="text-gray-400 mr-2 text-lg"></ion-icon>
+                                            <select id="semester" name="semester" class="text-gray-700 focus:ring-0 appearance-none cursor-pointer" required>
+                                                <option value="" disabled selected>Select Semester</option>
+                                                <option value="1">1st Semester</option>
+                                                <option value="2">2nd Semester</option>
+                                                <option value="3">3rd Semester</option>
+                                                <option value="4">4th Semester</option>
+                                                <option value="5">5th Semester</option>
+                                                <option value="6">6th Semester</option>
+                                                <option value="7">7th Semester</option>
+                                                <option value="8">8th Semester</option>
+                                            </select>
+                                            <!-- Custom chevron for select -->
+                                            <ion-icon name="chevron-down-outline" class="text-gray-400 text-sm ml-2 pointer-events-none"></ion-icon>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- RIGHT COLUMN: Face Identification Section -->
+                            <div>
+                                <h3 class="font-semibold text-gray-700 mb-4 flex items-center space-x-2">
+                                    <ion-icon name="happy-outline" class="text-xl"></ion-icon>
+                                    <span>Face Identification</span>
+                                </h3>
+                                
+                                <!-- Face Capture Box Placeholder -->
+                                <div id="camera-container" class="face-capture-box bg-gray-50 rounded-xl shadow-inner flex flex-col items-center justify-center p-6 h-[300px] text-center relative">
+                                    <!-- Video and Canvas elements (initially hidden) -->
+                                    <video id="video" class="absolute top-0 left-0 w-full h-full object-cover rounded-xl hidden" autoplay playsinline></video>
+                                    <canvas id="photoCanvas" class="absolute top-0 left-0 w-full h-full object-cover rounded-xl hidden"></canvas>
+                                    
+                                    <!-- Overlay Canvas for drawing the bounding box -->
+                                    <canvas id="overlayCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+
+                                    <!-- Placeholder content -->
+                                    <div id="placeholder">
+                                        <ion-icon name="camera-outline" class="text-4xl text-blue-400 mb-3"></ion-icon>
+                                        <p class="text-gray-600 font-medium">Capture Face Photo</p>
+                                        <p class="text-sm text-gray-400 mt-1">A clear, well-lit photo is required.</p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Note Box -->
+                                <div class="mt-4 p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-sm">
+                                    <span class="font-semibold">Note:</span> Make sure your face is clearly visible and well-lit. This photo will be used for automated attendance marking.
+                                </div>
+                                <!-- Button Container - MOVED HERE -->
+                                <div class="flex justify-center space-x-4 mt-4">
+                                    <button type="button" id="openCameraBtn" class="flex items-center space-x-2 px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition duration-150 shadow-md shadow-blue-500/50">
+                                        <ion-icon name="camera-outline" class="text-xl"></ion-icon>
+                                        <span>Open Camera</span>
+                                    </button>
+                                    <button type="button" id="closeCameraBtn" class="hidden px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition duration-150 shadow-md shadow-red-500/50">
+                                        <ion-icon name="close-circle-outline" class="text-xl"></ion-icon>
+                                        <span>Close Camera</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div> <!-- End of Two-Column Layout -->
+                        
+
+
+                        <!-- Register Button (NOW BLUE - MATCHING THEME, Full Width) -->
+                        <button type="submit" class="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg mt-8 hover:bg-blue-700 transition duration-150 shadow-xl shadow-blue-500/50">
+                            <ion-icon name="checkmark-circle-outline" class="text-2xl"></ion-icon>
+                            <span>Register Student</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </main>
+
+        <!-- FOOTER (Matching the "Made in Bolt" text placement) -->
+        <footer class="mt-8 text-right text-sm text-gray-400">
+        </footer>
+
+    </div>
+
+<script>
+    const video = document.getElementById('video');
+    const cameraButton = document.getElementById('openCameraBtn');
+    const placeholder = document.getElementById('placeholder');
+    const registrationForm = document.getElementById('registrationForm');
+    const photoCanvas = document.getElementById('photoCanvas');
+    const photoCtx = photoCanvas.getContext('2d');
+    const overlayCanvas = document.getElementById('overlayCanvas');
+    const overlayCtx = overlayCanvas.getContext('2d');
+    let stream = null;
+    let detectionInterval = null;
+    let isCameraOpen = false;
+    let isPhotoCaptured = false;
+    let capturedImageBlob = null; // Variable to store the captured image data
+
+    // --- Unified Camera Button Handler ---
+    cameraButton.addEventListener('click', async () => {
+        if (isPhotoCaptured) {
+            // State: Photo is captured, button is "Retake Photo". Reload to reset.
+            window.location.reload();
+        } else if (isCameraOpen) {
+            // State: Camera is open, button is "Capture Photo".
+            capturePhoto();
+        } else {
+            // State: Initial, button is "Open Camera".
+            await openCamera();
+        }
+    });
+    
+    // Function to capture the photo and update UI
+    function capturePhoto() {
+    if (!isCameraOpen || !video.videoWidth || !video.videoHeight) {
+        alert("Camera is not ready yet. Please wait a second and try again.");
+        return;
+    }
+
+    isPhotoCaptured = true;
+    clearInterval(detectionInterval);
+    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+    // ✅ Draw the current video frame onto the canvas before converting to blob
+    photoCtx.drawImage(video, 0, 0, photoCanvas.width, photoCanvas.height);
+
+    // Stop the camera stream
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+    }
+
+    // Convert canvas to blob and store it
+    photoCanvas.toBlob(blob => {
+        capturedImageBlob = blob;
+        console.log("✅ Captured image blob ready:", blob.size, "bytes");
+    }, 'image/jpeg', 0.95);
+
+    // Switch UI to preview
+    video.classList.add('hidden');
+    photoCanvas.classList.remove('hidden');
+
+    // Change button to “Retake Photo”
+    cameraButton.innerHTML = `<ion-icon name="refresh-outline" class="text-xl"></ion-icon><span>Retake Photo</span>`;
+    document.getElementById('closeCameraBtn').classList.add('hidden');
+}
+
+
+    async function openCamera() {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+
+        await new Promise(resolve => {
+            video.onloadedmetadata = () => {
+                video.play();
+                overlayCanvas.width = video.videoWidth;
+                overlayCanvas.height = video.videoHeight;
+                photoCanvas.width = video.videoWidth;
+                photoCanvas.height = video.videoHeight;
+                resolve();
+            };
+        });
+
+        video.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+        isCameraOpen = true;
+
+        // Update button to "Capture Photo"
+        cameraButton.innerHTML = `<ion-icon name="camera-outline" class="text-xl"></ion-icon><span>Capture Photo</span>`;
+
+        // Show the close camera button
+        document.getElementById('closeCameraBtn').classList.remove('hidden');
+
+        // Start detecting faces
+        detectionInterval = setInterval(detectFaceInStream, 500);
+
+    } catch (err) {
+        console.error("Error accessing camera: ", err);
+        alert("Could not access camera. Please ensure you have a webcam and grant permission.");
+    }
+}
+
+
+    // --- New: Close Camera Button Handler ---
+    const closeCameraBtn = document.getElementById('closeCameraBtn');
+    closeCameraBtn.addEventListener('click', () => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+        clearInterval(detectionInterval);
+        video.classList.add('hidden');
+        photoCanvas.classList.add('hidden');
+        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        placeholder.classList.remove('hidden');
+        closeCameraBtn.classList.add('hidden');
+        cameraButton.innerHTML = `<ion-icon name="camera-outline" class="text-xl"></ion-icon><span>Open Camera</span>`;
+        isCameraOpen = false;
+        isPhotoCaptured = false;
+        capturedImageBlob = null; // Reset captured image
+    });
+
+    async function detectFaceInStream() {
+        if (!video.srcObject || isPhotoCaptured) return; // Don't detect if photo is already taken
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = video.videoWidth;
+        tempCanvas.height = video.videoHeight;
+        tempCanvas.getContext('2d').drawImage(video, 0, 0);
+
+        const blob = await new Promise(r => tempCanvas.toBlob(r, 'image/jpeg'));
+        const formData = new FormData();
+        formData.append('frame', blob, 'detect.jpg');
+
+        const res = await fetch('/detect_face', { method: 'POST', body: formData });
+        const data = await res.json();
+
+        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+        if (res.ok && data.status === 'success') {
+            const [x, y, w, h] = data.box;
+            overlayCtx.strokeStyle = '#34d399';
+            overlayCtx.lineWidth = 3;
+            overlayCtx.strokeRect(x, y, w, h);
+        }
+    }
+
+    // 3. Handle Form Submission
+    registrationForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    if (!isPhotoCaptured) {
+        alert("No photo captured. Please open the camera and capture a photo.");
+        return;
+    }
+
+    // ✅ Add this check right here:
+    if (!capturedImageBlob) {
+        alert("Photo not captured or camera not ready yet.");
+        return;
+    }
+
+    const formData = new FormData(registrationForm);
+
+    // Append the stored image blob
+    formData.append('face', capturedImageBlob, 'face.jpg');
+
+    const res = await fetch('/register', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    alert(data.message);
+    if (res.ok) {
+        window.location.href = '/';
+    }
+});
+
+</script>
+
+</body>
+</html>

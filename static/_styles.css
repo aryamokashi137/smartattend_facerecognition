@@ -1,0 +1,50 @@
+/* Custom background and font */
+body {
+    font-family: 'Inter', sans-serif;
+    /* Uses the background gradient defined in Tailwind config */
+    background: linear-gradient(135deg, #f0f4f8 0%, #e0e7ee 100%);
+    min-height: 100vh;
+}
+
+/* Utility for the dark history panel header */
+.history-header {
+    background-color: #2c3e50; /* Dark slate/navy */
+}
+
+/* Utility for the blue gradient background of the scanner panel */
+.scanner-header-bg {
+    background: linear-gradient(90deg, #1e3a8a, #06b6d4);
+}
+
+/* Utility for the green registration header */
+.register-header-bg {
+    background: linear-gradient(90deg, #059669, #10b981); /* Dark green to lighter green */
+}
+
+/* Hide scrollbars for a cleaner look */
+::-webkit-scrollbar {
+    display: none;
+}
+
+/* Style for custom input wrapper, mimicking Tailwind classes */
+.custom-input {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem; /* p-3 */
+    border: 1px solid #d1d5db; /* border-gray-300 */
+    border-radius: 0.5rem; /* rounded-lg */
+    background-color: white; /* bg-white */
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+}
+
+.custom-input input, .custom-input select {
+    flex-grow: 1; /* flex-grow */
+    outline: none;
+    background-color: transparent;
+    color: #374151; /* text-gray-700 */
+}
+
+/* Styling for the face capture box border */
+.face-capture-box {
+    border: 1px dashed #d1d5db; /* Gray-300 dashed border */
+}

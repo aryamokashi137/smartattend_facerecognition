@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Dashboard</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Ionicons -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    
+    <!-- Custom Styles -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e0e7ee 100%);
+            min-height: 100vh;
+        }
+        .history-header {
+            background-color: #2c3e50;
+        }
+        ::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'card-blue': '#3b82f6',
+                        'card-green': '#10b981',
+                        'card-purple': '#8b5cf6',
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- HEADER -->
+        <header class="flex items-center justify-between p-4 bg-white rounded-xl shadow-lg mb-8">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-blue-600 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white">
+                        <path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path><path d="M12 10v4"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-gray-800">SmartAttend</h1>
+                    <p class="text-sm text-gray-500">AI Based Face Recognition Attendance System</p>
+                </div>
+            </div>
+            
+            <!-- Navigation Buttons -->
+            <nav class="flex space-x-2">
+                <a href="/register" class="flex items-center space-x-2 px-4 py-2 bg-white text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition duration-150 shadow-md">
+                    <ion-icon name="person-add-outline" class="text-xl"></ion-icon>
+                    <span class="font-semibold hidden sm:inline">Register</span>
+                </a>
+                <a href="/scan" class="flex items-center space-x-2 px-4 py-2 bg-white text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition duration-150 shadow-md">
+                    <ion-icon name="camera-outline" class="text-xl"></ion-icon>
+                    <span class="font-semibold hidden sm:inline">Scan</span>
+                </a>
+                <a href="/" class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-150 shadow-md">
+                    <ion-icon name="time-outline" class="text-xl"></ion-icon>
+                    <span class="font-semibold hidden sm:inline">History</span>
+                </a>
+            </nav>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <main>
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- Today's Attendance -->
+                <div class="bg-card-blue text-white p-6 rounded-xl shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium opacity-80">Today's Attendance</p>
+                            <p class="text-3xl font-bold">{{ stats.todays_attendance }}</p>
+                        </div>
+                        <ion-icon name="calendar-outline" class="text-4xl opacity-50"></ion-icon>
+                    </div>
+                </div>
+                <!-- Students Present Today -->
+                <div class="bg-card-green text-white p-6 rounded-xl shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium opacity-80">Students Present Today</p>
+                            <p class="text-3xl font-bold">{{ stats.present_count }}</p>
+                        </div>
+                        <ion-icon name="happy-outline" class="text-4xl opacity-50"></ion-icon>
+                    </div>
+                </div>
+                <!-- Total Records -->
+                <div class="bg-card-purple text-white p-6 rounded-xl shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium opacity-80">Total Records</p>
+                            <p class="text-3xl font-bold">{{ stats.total_records }}</p>
+                        </div>
+                        <ion-icon name="archive-outline" class="text-4xl opacity-50"></ion-icon>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance History Table -->
+            <div class="bg-white rounded-xl shadow-2xl overflow-hidden">
+                <!-- Table Header -->
+                <div class="history-header text-white p-4 flex items-center space-x-3 text-xl font-bold">
+                    <ion-icon name="list-outline" class="text-2xl"></ion-icon>
+                    <span>Attendance History</span>
+                </div>
+                
+                <!-- Table Container -->
+                <div class="p-4">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-600">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3">
+                                        Student Name
+                                    </th>
+                                    <th scope="col" class="px-6 py-3">
+                                        PRN
+                                    </th>
+                                    <th scope="col" class="px-6 py-3">
+                                        Date
+                                    </th>
+                                    <th scope="col" class="px-6 py-3">
+                                        Time (IST)
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if records %}
+                                    {% for record in records %}
+                                    <tr class="bg-white border-b hover:bg-gray-50">
+                                        <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+                                            {{ record.FullName }}
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            {{ record.PRN }}
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            {{ record.Date }}
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            {{ record.Time }}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr class="bg-white border-b">
+                                        <td colspan="4" class="px-6 py-4 text-center text-gray-500">
+                                            No attendance records found.
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="mt-8 text-right text-sm text-gray-400">
+            <!-- Footer content can go here -->
+        </footer>
+    </div>
+
+</body>
+</html>

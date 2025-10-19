@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Scanner</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Ionicons (used for icons in navigation) -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    
+    <!-- Custom Styles (Shared CSS) -->
+    <style>
+        /* Custom background and font */
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Uses the background gradient defined in Tailwind config */
+            background: linear-gradient(135deg, #f0f4f8 0%, #e0e7ee 100%);
+            min-height: 100vh;
+        }
+
+        /* Utility for the dark history panel header */
+        .history-header {
+            background-color: #2c3e50; /* Dark slate/navy */
+        }
+
+        /* Utility for the blue gradient background of the scanner panel */
+        .scanner-header-bg {
+            background: linear-gradient(90deg, #1e3a8a, #06b6d4);
+        }
+
+        /* Utility for the green registration header */
+        .register-header-bg {
+            background: linear-gradient(90deg, #059669, #10b981); /* Dark green to lighter green */
+        }
+
+        /* Hide scrollbars for a cleaner look */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Style for custom input wrapper, mimicking Tailwind classes */
+        .custom-input {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem; /* p-3 */
+            border: 1px solid #d1d5db; /* border-gray-300 */
+            border-radius: 0.5rem; /* rounded-lg */
+            background-color: white; /* bg-white */
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+        }
+
+        .custom-input input, .custom-input select {
+            flex-grow: 1; /* flex-grow */
+            outline: none;
+            background-color: transparent;
+            color: #374151; /* text-gray-700 */
+        }
+
+        /* Styling for the face capture box border */
+        .face-capture-box {
+            border: 1px dashed #d1d5db; /* Gray-300 dashed border */
+        }
+    </style>
+    
+    <!-- Tailwind Configuration (for custom colors) -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // Custom colors used in the stat cards
+                        'card-blue': '#3b82f6',
+                        'card-green': '#10b981',
+                        'card-purple': '#8b5cf6',
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- HEADER (Shared across all pages) -->
+        <header class="flex items-center justify-between p-4 bg-white rounded-xl shadow-lg mb-8">
+            <div class="flex items-center space-x-3">
+                <!-- Logo/Icon (Blue Star/Sparkle icon) -->
+                <div class="p-2 bg-blue-600 rounded-full">
+                    <!-- UPDATED LOGO -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white">
+                        <path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path><path d="M12 10v4"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-gray-800">SmartAttend</h1>
+                    <!-- UPDATED SUB-HEADER -->
+                    <p class="text-sm text-gray-500">AI Based Face Recognition Attendance System</p>
+                </div>
+            </div>
+            
+            <!-- Navigation Buttons (Links to other HTML files) -->
+            <nav class="flex space-x-2">
+                <!-- Register Button (Link) -->
+                <a href="/register" class="flex items-center space-x-2 px-4 py-2 bg-white text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition duration-150 shadow-md">
+                    <ion-icon name="person-add-outline" class="text-xl"></ion-icon>
+                    <span class="font-semibold hidden sm:inline">Register</span>
+                </a>
+
+                <!-- Scan Face Button (Active Page) -->
+                <a href="/scan" class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-150 shadow-md">
+                    <!-- UPDATED ICON -->
+                    <ion-icon name="camera-outline" class="text-xl"></ion-icon>
+                    <span class="font-semibold hidden sm:inline">Scan</span>
+                </a>
+                
+                <!-- History Button (Link) -->
+                <a href="/" class="flex items-center space-x-2 px-4 py-2 bg-white text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition duration-150 shadow-md">
+                    <ion-icon name="time-outline" class="text-xl"></ion-icon>
+                    <span class="font-semibold hidden sm:inline">History</span>
+                </a>
+            </nav>
+        </header>
+
+        <!-- MAIN CONTENT AREA: Scanner View -->
+        <main>
+            <div class="p-6 md:p-12 bg-white rounded-xl shadow-2xl">
+                <div class="max-w-xl mx-auto">
+                    <!-- Scanner Header (Blue Gradient) -->
+                    <div class="scanner-header-bg text-white p-4 rounded-t-xl flex items-center space-x-3 text-xl font-bold">
+                        <ion-icon name="camera-outline" class="text-2xl"></ion-icon>
+                        <span>Face Recognition Scanner</span>
+                    </div>
+                    <div class="bg-white p-6 rounded-b-xl border-t-2 border-gray-100">
+                        <p class="text-sm text-gray-500 mb-6 text-center">Position your face within the frame to mark your attendance.</p>
+
+                        <!-- Camera Placeholder / Live View Area -->
+                        <div id="camera-container" class="bg-gray-900 aspect-video rounded-xl shadow-inner flex flex-col items-center justify-center p-8 min-h-[300px] relative">
+                            <!-- Initial placeholder content -->
+                            <div id="placeholder" class="text-center">
+                                <div class="p-4 bg-gray-700/50 rounded-full mb-4 inline-block">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                                </div>
+                                <p class="text-white text-lg mt-2 font-semibold">Camera is ready</p>
+                                <p class="text-gray-400 text-sm">Click below to enable webcam access.</p>
+                            </div>
+
+                            <!-- Video element (initially hidden) -->
+                            <video id="video" class="w-full h-full object-cover rounded-xl hidden" autoplay playsinline></video>
+
+                            <!-- Canvas for drawing bounding boxes -->
+                            <canvas id="overlayCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+
+                            <!-- Status message overlay -->
+                            <div id="status-overlay" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-lg text-sm hidden"></div>
+                        </div>
+
+                        <!-- Control Buttons -->
+                        <div class="mt-6 flex justify-center space-x-4">
+                             <!-- Start Camera Button -->
+                            <button id="startCameraBtn" class="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition duration-150 shadow-md shadow-blue-500/50">
+                                <ion-icon name="videocam-outline" class="text-xl"></ion-icon>
+                                <span>Start Camera</span>
+                            </button>
+                            <!-- Stop Camera Button (initially hidden) -->
+                            <button id="stopCameraBtn" class="hidden flex items-center space-x-2 px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition duration-150 shadow-md shadow-red-500/50">
+                                <ion-icon name="close-circle-outline" class="text-xl"></ion-icon>
+                                <span>Close Camera</span>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- FOOTER (Matching the "Made in Bolt" text placement) -->
+        <footer class="mt-8 text-right text-sm text-gray-400"></footer>
+
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const video = document.getElementById('video');
+    const startBtn = document.getElementById('startCameraBtn');
+    const stopBtn = document.getElementById('stopCameraBtn');
+    const placeholder = document.getElementById('placeholder');
+    const statusOverlay = document.getElementById('status-overlay');
+    const overlayCanvas = document.getElementById('overlayCanvas');
+    const ctx = overlayCanvas.getContext('2d');
+
+    let stream = null;
+    let scanTimeoutId = null;
+    let isScanning = false;
+
+    function showStatus(message, isError = false) {
+        statusOverlay.textContent = message;
+        statusOverlay.className = `absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-sm ${isError ? 'bg-red-500/80' : 'bg-green-500/80'} text-white`;
+        statusOverlay.classList.remove('hidden');
+        setTimeout(() => statusOverlay.classList.add('hidden'), 3000);
+    }
+
+    startBtn.addEventListener('click', async () => {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+
+            await new Promise(resolve => {
+                video.onloadedmetadata = () => {
+                    overlayCanvas.width = video.videoWidth;
+                    overlayCanvas.height = video.videoHeight;
+                    video.play();
+                    resolve();
+                };
+            });
+
+            video.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+            startBtn.classList.add('hidden');
+            stopBtn.classList.remove('hidden');
+
+            isScanning = true;
+            captureAndScan();
+        } catch (err) {
+            console.error("Error accessing camera: ", err);
+            showStatus("Could not access camera.", true);
+        }
+    });
+
+    stopBtn.addEventListener('click', () => {
+        isScanning = false;
+        clearTimeout(scanTimeoutId);
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+        video.classList.add('hidden');
+        ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        placeholder.classList.remove('hidden');
+        startBtn.classList.remove('hidden');
+        stopBtn.classList.add('hidden');
+    });
+
+    async function captureAndScan() {
+        if (!isScanning || !video.srcObject || video.paused || video.ended) return;
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = video.videoWidth;
+        tempCanvas.height = video.videoHeight;
+        tempCanvas.getContext('2d').drawImage(video, 0, 0);
+
+        const blob = await new Promise(r => tempCanvas.toBlob(r, 'image/jpeg'));
+        const formData = new FormData();
+        formData.append('frame', blob, 'scan.jpg');
+
+        try {
+            const res = await fetch('/scan', { method: 'POST', body: formData });
+            const data = await res.json();
+
+            ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+            if (res.ok && data.status === 'success' && data.faces.length > 0) {
+                const recognizedNames = data.faces.map(f => f.name).filter(name => name !== "Unknown");
+                if (recognizedNames.length > 0) {
+                    showStatus(`✅ Attendance marked for: ${recognizedNames.join(', ')}`);
+                }
+
+                data.faces.forEach(face => {
+                    const [x, y, w, h] = face.box;
+                    ctx.strokeStyle = face.name === "Unknown" ? '#f87171' : '#34d399'; // Red for unknown, green for known
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(x, y, w, h);
+
+                    ctx.fillStyle = ctx.strokeStyle;
+                    ctx.font = '18px Inter, sans-serif';
+                    ctx.fillText(face.name, x, y > 20 ? y - 10 : y + h + 20);
+                });
+            } else if (data.message) {
+                console.log(`ℹ️ Server: ${data.message}`);
+            }
+        } catch (error) {
+            console.error("Error scanning frame:", error);
+            showStatus("Error connecting to server.", true);
+        } finally {
+            if (isScanning) {
+                scanTimeoutId = setTimeout(captureAndScan, 2000);
+            }
+        }
+    }
+});
+</script>
+
+</body>
+</html>
