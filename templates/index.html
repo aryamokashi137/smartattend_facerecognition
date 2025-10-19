@@ -9,7 +9,6 @@
     <!-- Load Ionicons -->
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
-    
     <!-- Custom Styles -->
     <style>
         body {
@@ -24,7 +23,6 @@
             display: none;
         }
     </style>
-
     <!-- Tailwind Config -->
     <script>
         tailwind.config = {
@@ -41,14 +39,18 @@
     </script>
 </head>
 <body class="p-4 md:p-8">
-
     <div class="max-w-6xl mx-auto">
         <!-- HEADER -->
         <header class="flex items-center justify-between p-4 bg-white rounded-xl shadow-lg mb-8">
             <div class="flex items-center space-x-3">
                 <div class="p-2 bg-blue-600 rounded-full">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white">
-                        <path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path><path d="M12 10v4"></path>
+                        <path d="M3 7V5a2 2 0 0 1 2-2h2"></path>
+                        <path d="M17 3h2a2 2 0 0 1 2 2v2"></path>
+                        <path d="M21 17v2a2 2 0 0 1-2 2h-2"></path>
+                        <path d="M7 21H5a2 2 0 0 1-2-2v-2"></path>
+                        <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path>
+                        <path d="M12 10v4"></path>
                     </svg>
                 </div>
                 <div>
@@ -56,7 +58,6 @@
                     <p class="text-sm text-gray-500">AI Based Face Recognition Attendance System</p>
                 </div>
             </div>
-            
             <!-- Navigation Buttons -->
             <nav class="flex space-x-2">
                 <a href="/register" class="flex items-center space-x-2 px-4 py-2 bg-white text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition duration-150 shadow-md">
@@ -117,50 +118,31 @@
                     <ion-icon name="list-outline" class="text-2xl"></ion-icon>
                     <span>Attendance History</span>
                 </div>
-                
                 <!-- Table Container -->
                 <div class="p-4">
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm text-left text-gray-600">
                             <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                                 <tr>
-                                    <th scope="col" class="px-6 py-3">
-                                        Student Name
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        PRN
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        Date
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        Time (IST)
-                                    </th>
+                                    <th scope="col" class="px-6 py-3">Student Name</th>
+                                    <th scope="col" class="px-6 py-3">PRN</th>
+                                    <th scope="col" class="px-6 py-3">Date</th>
+                                    <th scope="col" class="px-6 py-3">Time (IST)</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% if records %}
                                     {% for record in records %}
-                                    <tr class="bg-white border-b hover:bg-gray-50">
-                                        <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
-                                            {{ record.FullName }}
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            {{ record.PRN }}
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            {{ record.Date }}
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            {{ record.Time }}
-                                        </td>
-                                    </tr>
+                                        <tr class="bg-white border-b hover:bg-gray-50">
+                                            <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{{ record.FullName }}</td>
+                                            <td class="px-6 py-4">{{ record.PRN }}</td>
+                                            <td class="px-6 py-4">{{ record.Date }}</td>
+                                            <td class="px-6 py-4">{{ record.Time }}</td>
+                                        </tr>
                                     {% endfor %}
                                 {% else %}
                                     <tr class="bg-white border-b">
-                                        <td colspan="4" class="px-6 py-4 text-center text-gray-500">
-                                            No attendance records found.
-                                        </td>
+                                        <td colspan="4" class="px-6 py-4 text-center text-gray-500">No attendance records found.</td>
                                     </tr>
                                 {% endif %}
                             </tbody>
@@ -175,6 +157,5 @@
             <!-- Footer content can go here -->
         </footer>
     </div>
-
 </body>
 </html>

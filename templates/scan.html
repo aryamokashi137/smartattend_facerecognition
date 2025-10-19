@@ -184,114 +184,114 @@
     </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const video = document.getElementById('video');
-    const startBtn = document.getElementById('startCameraBtn');
-    const stopBtn = document.getElementById('stopCameraBtn');
-    const placeholder = document.getElementById('placeholder');
-    const statusOverlay = document.getElementById('status-overlay');
-    const overlayCanvas = document.getElementById('overlayCanvas');
-    const ctx = overlayCanvas.getContext('2d');
+    document.addEventListener('DOMContentLoaded', () => {
+        const video = document.getElementById('video');
+        const startBtn = document.getElementById('startCameraBtn');
+        const stopBtn = document.getElementById('stopCameraBtn');
+        const placeholder = document.getElementById('placeholder');
+        const statusOverlay = document.getElementById('status-overlay');
+        const overlayCanvas = document.getElementById('overlayCanvas');
+        const ctx = overlayCanvas.getContext('2d');
 
-    let stream = null;
-    let scanTimeoutId = null;
-    let isScanning = false;
+        let stream = null;
+        let scanTimeoutId = null;
+        let isScanning = false;
 
-    function showStatus(message, isError = false) {
-        statusOverlay.textContent = message;
-        statusOverlay.className = `absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-sm ${isError ? 'bg-red-500/80' : 'bg-green-500/80'} text-white`;
-        statusOverlay.classList.remove('hidden');
-        setTimeout(() => statusOverlay.classList.add('hidden'), 3000);
-    }
-
-    startBtn.addEventListener('click', async () => {
-        try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            video.srcObject = stream;
-
-            await new Promise(resolve => {
-                video.onloadedmetadata = () => {
-                    overlayCanvas.width = video.videoWidth;
-                    overlayCanvas.height = video.videoHeight;
-                    video.play();
-                    resolve();
-                };
-            });
-
-            video.classList.remove('hidden');
-            placeholder.classList.add('hidden');
-            startBtn.classList.add('hidden');
-            stopBtn.classList.remove('hidden');
-
-            isScanning = true;
-            captureAndScan();
-        } catch (err) {
-            console.error("Error accessing camera: ", err);
-            showStatus("Could not access camera.", true);
+        function showStatus(message, isError = false) {
+            statusOverlay.textContent = message;
+            statusOverlay.className = `absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-sm ${isError ? 'bg-red-500/80' : 'bg-green-500/80'} text-white`;
+            statusOverlay.classList.remove('hidden');
+            setTimeout(() => statusOverlay.classList.add('hidden'), 3000);
         }
-    });
 
-    stopBtn.addEventListener('click', () => {
-        isScanning = false;
-        clearTimeout(scanTimeoutId);
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            stream = null;
-        }
-        video.classList.add('hidden');
-        ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-        placeholder.classList.remove('hidden');
-        startBtn.classList.remove('hidden');
-        stopBtn.classList.add('hidden');
-    });
+        startBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
 
-    async function captureAndScan() {
-        if (!isScanning || !video.srcObject || video.paused || video.ended) return;
-
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = video.videoWidth;
-        tempCanvas.height = video.videoHeight;
-        tempCanvas.getContext('2d').drawImage(video, 0, 0);
-
-        const blob = await new Promise(r => tempCanvas.toBlob(r, 'image/jpeg'));
-        const formData = new FormData();
-        formData.append('frame', blob, 'scan.jpg');
-
-        try {
-            const res = await fetch('/scan', { method: 'POST', body: formData });
-            const data = await res.json();
-
-            ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-
-            if (res.ok && data.status === 'success' && data.faces.length > 0) {
-                const recognizedNames = data.faces.map(f => f.name).filter(name => name !== "Unknown");
-                if (recognizedNames.length > 0) {
-                    showStatus(`✅ Attendance marked for: ${recognizedNames.join(', ')}`);
-                }
-
-                data.faces.forEach(face => {
-                    const [x, y, w, h] = face.box;
-                    ctx.strokeStyle = face.name === "Unknown" ? '#f87171' : '#34d399'; // Red for unknown, green for known
-                    ctx.lineWidth = 3;
-                    ctx.strokeRect(x, y, w, h);
-
-                    ctx.fillStyle = ctx.strokeStyle;
-                    ctx.font = '18px Inter, sans-serif';
-                    ctx.fillText(face.name, x, y > 20 ? y - 10 : y + h + 20);
+                await new Promise(resolve => {
+                    video.onloadedmetadata = () => {
+                        overlayCanvas.width = video.videoWidth;
+                        overlayCanvas.height = video.videoHeight;
+                        video.play();
+                        resolve();
+                    };
                 });
-            } else if (data.message) {
-                console.log(`ℹ️ Server: ${data.message}`);
+
+                video.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                startBtn.classList.add('hidden');
+                stopBtn.classList.remove('hidden');
+
+                isScanning = true;
+                captureAndScan();
+            } catch (err) {
+                console.error("Error accessing camera: ", err);
+                showStatus("Could not access camera.", true);
             }
-        } catch (error) {
-            console.error("Error scanning frame:", error);
-            showStatus("Error connecting to server.", true);
-        } finally {
-            if (isScanning) {
-                scanTimeoutId = setTimeout(captureAndScan, 2000);
+        });
+
+        stopBtn.addEventListener('click', () => {
+            isScanning = false;
+            clearTimeout(scanTimeoutId);
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            video.classList.add('hidden');
+            ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            placeholder.classList.remove('hidden');
+            startBtn.classList.remove('hidden');
+            stopBtn.classList.add('hidden');
+        });
+
+        async function captureAndScan() {
+            if (!isScanning || !video.srcObject || video.paused || video.ended) return;
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = video.videoWidth;
+            tempCanvas.height = video.videoHeight;
+            tempCanvas.getContext('2d').drawImage(video, 0, 0);
+
+            const blob = await new Promise(r => tempCanvas.toBlob(r, 'image/jpeg'));
+            const formData = new FormData();
+            formData.append('frame', blob, 'scan.jpg');
+
+            try {
+                const res = await fetch('/scan', { method: 'POST', body: formData });
+                const data = await res.json();
+
+                ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+                if (res.ok && data.status === 'success' && data.faces.length > 0) {
+                    const recognizedNames = data.faces.map(f => f.name).filter(name => name !== "Unknown");
+                    if (recognizedNames.length > 0) {
+                        showStatus(`✅ Attendance marked for: ${recognizedNames.join(', ')}`);
+                    }
+
+                    data.faces.forEach(face => {
+                        const [x, y, w, h] = face.box;
+                        ctx.strokeStyle = face.name === "Unknown" ? '#f87171' : '#34d399'; // Red for unknown, green for known
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(x, y, w, h);
+
+                        ctx.fillStyle = ctx.strokeStyle;
+                        ctx.font = '18px Inter, sans-serif';
+                        ctx.fillText(face.name, x, y > 20 ? y - 10 : y + h + 20);
+                    });
+                } else if (data.message) {
+                    console.log(`ℹ️ Server: ${data.message}`);
+                }
+            } catch (error) {
+                console.error("Error scanning frame:", error);
+                showStatus("Error connecting to server.", true);
+            } finally {
+                if (isScanning) {
+                    scanTimeoutId = setTimeout(captureAndScan, 2000);
+                }
             }
         }
-    }
-});
+    });
 </script>
 
 </body>

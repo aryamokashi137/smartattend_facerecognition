@@ -37,169 +37,7 @@
 
         /* Hide scrollbars for a cleaner look */
         ::-webkit-scrollbar {
-            display: none;<script>
-const video = document.getElementById('video');
-const cameraButton = document.getElementById('openCameraBtn');
-const placeholder = document.getElementById('placeholder');
-const registrationForm = document.getElementById('registrationForm');
-const photoCanvas = document.getElementById('photoCanvas');
-const photoCtx = photoCanvas.getContext('2d');
-const overlayCanvas = document.getElementById('overlayCanvas');
-const overlayCtx = overlayCanvas.getContext('2d');
-const closeCameraBtn = document.getElementById('closeCameraBtn');
-
-let stream = null;
-let detectionInterval = null;
-let isCameraOpen = false;
-let isPhotoCaptured = false;
-let capturedImageBlob = null;
-
-// ✅ Unified camera button handler
-cameraButton.addEventListener('click', async () => {
-    if (isPhotoCaptured) {
-        window.location.reload();
-        return;
-    }
-
-    if (isCameraOpen) {
-        capturePhoto();
-    } else {
-        await openCamera();
-    }
-});
-
-// ✅ Open the webcam and show video preview
-async function openCamera() {
-    try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        video.srcObject = stream;
-        video.classList.remove('hidden');
-        placeholder.classList.add('hidden');
-        isCameraOpen = true;
-
-        // Wait until video metadata is ready
-        video.onloadedmetadata = () => {
-            video.play();
-            overlayCanvas.width = video.videoWidth;
-            overlayCanvas.height = video.videoHeight;
-            photoCanvas.width = video.videoWidth;
-            photoCanvas.height = video.videoHeight;
-        };
-
-        // Update buttons
-        cameraButton.innerHTML = `<ion-icon name="camera-outline" class="text-xl"></ion-icon><span>Capture Photo</span>`;
-        closeCameraBtn.classList.remove('hidden');
-
-        // Start face detection
-        detectionInterval = setInterval(detectFaceInStream, 600);
-    } catch (err) {
-        console.error("Camera error:", err);
-        alert("Could not access camera. Please allow webcam permissions.");
-    }
-}
-
-// ✅ Capture photo from video
-function capturePhoto() {
-    if (!isCameraOpen) {
-        alert("Camera is not ready yet.");
-        return;
-    }
-
-    isPhotoCaptured = true;
-    clearInterval(detectionInterval);
-    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-
-    photoCtx.drawImage(video, 0, 0, photoCanvas.width, photoCanvas.height);
-
-    // Stop camera stream
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        stream = null;
-    }
-
-    // Save captured image
-    photoCanvas.toBlob(blob => {
-        capturedImageBlob = blob;
-        console.log("✅ Captured image blob:", blob ? blob.size : 0, "bytes");
-    }, 'image/jpeg', 0.95);
-
-    // Switch UI to preview
-    video.classList.add('hidden');
-    photoCanvas.classList.remove('hidden');
-    closeCameraBtn.classList.add('hidden');
-    cameraButton.innerHTML = `<ion-icon name="refresh-outline" class="text-xl"></ion-icon><span>Retake Photo</span>`;
-    isCameraOpen = false;
-}
-
-// ✅ Close camera manually
-closeCameraBtn.addEventListener('click', () => {
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        stream = null;
-    }
-    clearInterval(detectionInterval);
-    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-    video.classList.add('hidden');
-    photoCanvas.classList.add('hidden');
-    placeholder.classList.remove('hidden');
-    closeCameraBtn.classList.add('hidden');
-    cameraButton.innerHTML = `<ion-icon name="camera-outline" class="text-xl"></ion-icon><span>Open Camera</span>`;
-    isCameraOpen = false;
-    isPhotoCaptured = false;
-    capturedImageBlob = null;
-});
-
-// ✅ Detect face during preview
-async function detectFaceInStream() {
-    if (!video.srcObject || isPhotoCaptured) return;
-
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = video.videoWidth;
-    tempCanvas.height = video.videoHeight;
-    tempCanvas.getContext('2d').drawImage(video, 0, 0);
-
-    const blob = await new Promise(r => tempCanvas.toBlob(r, 'image/jpeg'));
-    const formData = new FormData();
-    formData.append('frame', blob, 'detect.jpg');
-
-    const res = await fetch('/detect_face', { method: 'POST', body: formData });
-    const data = await res.json();
-
-    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-
-    if (res.ok && data.status === 'success') {
-        const [x, y, w, h] = data.box;
-        overlayCtx.strokeStyle = '#34d399';
-        overlayCtx.lineWidth = 3;
-        overlayCtx.strokeRect(x, y, w, h);
-    }
-}
-
-// ✅ Handle form submission
-registrationForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    if (!isPhotoCaptured) {
-        alert("No photo captured. Please open the camera and capture a photo first.");
-        return;
-    }
-
-    if (!capturedImageBlob) {
-        alert("Photo not captured or camera not ready yet.");
-        return;
-    }
-
-    const formData = new FormData(registrationForm);
-    formData.append('face', capturedImageBlob, 'face.jpg');
-
-    const res = await fetch('/register', { method: 'POST', body: formData });
-    const data = await res.json();
-
-    alert(data.message);
-    if (res.ok) window.location.href = '/';
-});
-</script>
-
+            display: none;
         }
 
         /* Style for custom input wrapper, mimicking Tailwind classes */
@@ -454,179 +292,147 @@ registrationForm.addEventListener('submit', async (e) => {
     </div>
 
 <script>
-    const video = document.getElementById('video');
-    const cameraButton = document.getElementById('openCameraBtn');
-    const placeholder = document.getElementById('placeholder');
-    const registrationForm = document.getElementById('registrationForm');
-    const photoCanvas = document.getElementById('photoCanvas');
-    const photoCtx = photoCanvas.getContext('2d');
-    const overlayCanvas = document.getElementById('overlayCanvas');
-    const overlayCtx = overlayCanvas.getContext('2d');
-    let stream = null;
-    let detectionInterval = null;
-    let isCameraOpen = false;
-    let isPhotoCaptured = false;
-    let capturedImageBlob = null; // Variable to store the captured image data
+    document.addEventListener('DOMContentLoaded', () => {
+        const video = document.getElementById('video');
+        const cameraButton = document.getElementById('openCameraBtn');
+        const closeCameraBtn = document.getElementById('closeCameraBtn');
+        const placeholder = document.getElementById('placeholder');
+        const registrationForm = document.getElementById('registrationForm');
+        const photoCanvas = document.getElementById('photoCanvas');
+        const photoCtx = photoCanvas.getContext('2d');
+        const overlayCanvas = document.getElementById('overlayCanvas');
+        const overlayCtx = overlayCanvas.getContext('2d');
 
-    // --- Unified Camera Button Handler ---
-    cameraButton.addEventListener('click', async () => {
-        if (isPhotoCaptured) {
-            // State: Photo is captured, button is "Retake Photo". Reload to reset.
-            window.location.reload();
-        } else if (isCameraOpen) {
-            // State: Camera is open, button is "Capture Photo".
-            capturePhoto();
-        } else {
-            // State: Initial, button is "Open Camera".
-            await openCamera();
-        }
-    });
-    
-    // Function to capture the photo and update UI
-    function capturePhoto() {
-    if (!isCameraOpen || !video.videoWidth || !video.videoHeight) {
-        alert("Camera is not ready yet. Please wait a second and try again.");
-        return;
-    }
+        let stream = null;
+        let detectionInterval = null;
+        let isCameraOpen = false;
+        let isPhotoCaptured = false;
+        let capturedImageBlob = null;
 
-    isPhotoCaptured = true;
-    clearInterval(detectionInterval);
-    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-
-    // ✅ Draw the current video frame onto the canvas before converting to blob
-    photoCtx.drawImage(video, 0, 0, photoCanvas.width, photoCanvas.height);
-
-    // Stop the camera stream
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        stream = null;
-    }
-
-    // Convert canvas to blob and store it
-    photoCanvas.toBlob(blob => {
-        capturedImageBlob = blob;
-        console.log("✅ Captured image blob ready:", blob.size, "bytes");
-    }, 'image/jpeg', 0.95);
-
-    // Switch UI to preview
-    video.classList.add('hidden');
-    photoCanvas.classList.remove('hidden');
-
-    // Change button to “Retake Photo”
-    cameraButton.innerHTML = `<ion-icon name="refresh-outline" class="text-xl"></ion-icon><span>Retake Photo</span>`;
-    document.getElementById('closeCameraBtn').classList.add('hidden');
-}
-
-
-    async function openCamera() {
-    try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        video.srcObject = stream;
-
-        await new Promise(resolve => {
-            video.onloadedmetadata = () => {
-                video.play();
-                overlayCanvas.width = video.videoWidth;
-                overlayCanvas.height = video.videoHeight;
-                photoCanvas.width = video.videoWidth;
-                photoCanvas.height = video.videoHeight;
-                resolve();
-            };
+        cameraButton.addEventListener('click', async () => {
+            if (isPhotoCaptured) {
+                window.location.reload();
+            } else if (isCameraOpen) {
+                capturePhoto();
+            } else {
+                await openCamera();
+            }
         });
 
-        video.classList.remove('hidden');
-        placeholder.classList.add('hidden');
-        isCameraOpen = true;
+        closeCameraBtn.addEventListener('click', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            clearInterval(detectionInterval);
+            video.classList.add('hidden');
+            photoCanvas.classList.add('hidden');
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            placeholder.classList.remove('hidden');
+            closeCameraBtn.classList.add('hidden');
+            cameraButton.innerHTML = `<ion-icon name="camera-outline" class="text-xl"></ion-icon><span>Open Camera</span>`;
+            isCameraOpen = false;
+            isPhotoCaptured = false;
+            capturedImageBlob = null;
+        });
 
-        // Update button to "Capture Photo"
-        cameraButton.innerHTML = `<ion-icon name="camera-outline" class="text-xl"></ion-icon><span>Capture Photo</span>`;
+        async function openCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
 
-        // Show the close camera button
-        document.getElementById('closeCameraBtn').classList.remove('hidden');
+                await new Promise(resolve => {
+                    video.onloadedmetadata = () => {
+                        video.play();
+                        overlayCanvas.width = video.videoWidth;
+                        overlayCanvas.height = video.videoHeight;
+                        photoCanvas.width = video.videoWidth;
+                        photoCanvas.height = video.videoHeight;
+                        resolve();
+                    };
+                });
 
-        // Start detecting faces
-        detectionInterval = setInterval(detectFaceInStream, 500);
-
-    } catch (err) {
-        console.error("Error accessing camera: ", err);
-        alert("Could not access camera. Please ensure you have a webcam and grant permission.");
-    }
-}
-
-
-    // --- New: Close Camera Button Handler ---
-    const closeCameraBtn = document.getElementById('closeCameraBtn');
-    closeCameraBtn.addEventListener('click', () => {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            stream = null;
+                video.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                isCameraOpen = true;
+                cameraButton.innerHTML = `<ion-icon name="camera-outline" class="text-xl"></ion-icon><span>Capture Photo</span>`;
+                closeCameraBtn.classList.remove('hidden');
+                detectionInterval = setInterval(detectFaceInStream, 500);
+            } catch (err) {
+                console.error("Error accessing camera: ", err);
+                alert("Could not access camera. Please ensure you have a webcam and grant permission.");
+            }
         }
-        clearInterval(detectionInterval);
-        video.classList.add('hidden');
-        photoCanvas.classList.add('hidden');
-        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-        placeholder.classList.remove('hidden');
-        closeCameraBtn.classList.add('hidden');
-        cameraButton.innerHTML = `<ion-icon name="camera-outline" class="text-xl"></ion-icon><span>Open Camera</span>`;
-        isCameraOpen = false;
-        isPhotoCaptured = false;
-        capturedImageBlob = null; // Reset captured image
+
+        function capturePhoto() {
+            if (!isCameraOpen || !video.videoWidth) {
+                alert("Camera is not ready yet. Please wait a moment.");
+                return;
+            }
+            isPhotoCaptured = true;
+            clearInterval(detectionInterval);
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            photoCtx.drawImage(video, 0, 0, photoCanvas.width, photoCanvas.height);
+
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+
+            photoCanvas.toBlob(blob => {
+                capturedImageBlob = blob;
+            }, 'image/jpeg', 0.95);
+
+            video.classList.add('hidden');
+            photoCanvas.classList.remove('hidden');
+            cameraButton.innerHTML = `<ion-icon name="refresh-outline" class="text-xl"></ion-icon><span>Retake Photo</span>`;
+            closeCameraBtn.classList.add('hidden');
+        }
+
+        async function detectFaceInStream() {
+            if (!isCameraOpen || isPhotoCaptured) return;
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = video.videoWidth;
+            tempCanvas.height = video.videoHeight;
+            tempCanvas.getContext('2d').drawImage(video, 0, 0);
+
+            const blob = await new Promise(r => tempCanvas.toBlob(r, 'image/jpeg'));
+            const formData = new FormData();
+            formData.append('frame', blob, 'detect.jpg');
+
+            const res = await fetch('/detect_face', { method: 'POST', body: formData });
+            const data = await res.json();
+
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+            if (res.ok && data.status === 'success') {
+                const [x, y, w, h] = data.box;
+                overlayCtx.strokeStyle = '#34d399';
+                overlayCtx.lineWidth = 3;
+                overlayCtx.strokeRect(x, y, w, h);
+            }
+        }
+
+        registrationForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!isPhotoCaptured || !capturedImageBlob) {
+                alert("No photo captured. Please open the camera and capture a photo.");
+                return;
+            }
+
+            const formData = new FormData(registrationForm);
+            formData.append('face', capturedImageBlob, 'face.jpg');
+
+            const res = await fetch('/register', { method: 'POST', body: formData });
+            const data = await res.json();
+
+            alert(data.message);
+            if (res.ok) {
+                window.location.href = '/';
+            }
+        });
     });
-
-    async function detectFaceInStream() {
-        if (!video.srcObject || isPhotoCaptured) return; // Don't detect if photo is already taken
-
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = video.videoWidth;
-        tempCanvas.height = video.videoHeight;
-        tempCanvas.getContext('2d').drawImage(video, 0, 0);
-
-        const blob = await new Promise(r => tempCanvas.toBlob(r, 'image/jpeg'));
-        const formData = new FormData();
-        formData.append('frame', blob, 'detect.jpg');
-
-        const res = await fetch('/detect_face', { method: 'POST', body: formData });
-        const data = await res.json();
-
-        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-
-        if (res.ok && data.status === 'success') {
-            const [x, y, w, h] = data.box;
-            overlayCtx.strokeStyle = '#34d399';
-            overlayCtx.lineWidth = 3;
-            overlayCtx.strokeRect(x, y, w, h);
-        }
-    }
-
-    // 3. Handle Form Submission
-    registrationForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    if (!isPhotoCaptured) {
-        alert("No photo captured. Please open the camera and capture a photo.");
-        return;
-    }
-
-    // ✅ Add this check right here:
-    if (!capturedImageBlob) {
-        alert("Photo not captured or camera not ready yet.");
-        return;
-    }
-
-    const formData = new FormData(registrationForm);
-
-    // Append the stored image blob
-    formData.append('face', capturedImageBlob, 'face.jpg');
-
-    const res = await fetch('/register', { method: 'POST', body: formData });
-    const data = await res.json();
-
-    alert(data.message);
-    if (res.ok) {
-        window.location.href = '/';
-    }
-});
-
 </script>
 
 </body>
