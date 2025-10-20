@@ -249,7 +249,7 @@ def scan():
             person_prn = label_encoder.inverse_transform([best_class_index])[0]
 
             # ✅ Apply threshold to filter unknown faces
-            THRESHOLD = 0.6  # you can adjust between 0.5–0.7 based on performance
+            THRESHOLD = 0.91  # you can adjust between 0.7-0.95 based on performance
             if confidence < THRESHOLD:
                 person_prn = "Unknown"
 
