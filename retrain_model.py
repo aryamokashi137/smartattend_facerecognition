@@ -38,7 +38,8 @@ print("🔄 Processing images in 'faces' directory...")
 
 for filename in os.listdir(FACES_DIR):
     if filename.endswith(".jpg"):
-        prn = os.path.splitext(filename)[0]  # PRN as label
+        # Correctly extract PRN from filenames like '12345_0.jpg'
+        prn = os.path.splitext(filename)[0].split('_')[0]
         img_path = os.path.join(FACES_DIR, filename)
         img = cv2.imread(img_path)
         if img is None:

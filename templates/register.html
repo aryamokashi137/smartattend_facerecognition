@@ -250,14 +250,14 @@
                                     <!-- Placeholder content -->
                                     <div id="placeholder">
                                         <ion-icon name="camera-outline" class="text-4xl text-blue-400 mb-3"></ion-icon>
-                                        <p class="text-gray-600 font-medium">Capture Face Photo</p>
-                                        <p class="text-sm text-gray-400 mt-1">A clear, well-lit photo is required.</p>
+                                        <p class="text-gray-600 font-medium">Record Face Video</p>
+                                        <p class="text-sm text-gray-400 mt-1">A 5-second video is required.</p>
                                     </div>
                                 </div>
                                 
                                 <!-- Note Box -->
                                 <div class="mt-4 p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-sm">
-                                    <span class="font-semibold">Note:</span> Make sure your face is clearly visible and well-lit. This photo will be used for automated attendance marking.
+                                    <span class="font-semibold">Note:</span> Make sure your face is clearly visible and well-lit. This video will be used for automated attendance marking.
                                 </div>
                                 <!-- Button Container - MOVED HERE -->
                                 <div class="flex justify-center space-x-4 mt-4">
@@ -300,21 +300,24 @@
         const registrationForm = document.getElementById('registrationForm');
         const photoCanvas = document.getElementById('photoCanvas');
         const photoCtx = photoCanvas.getContext('2d');
-        const overlayCanvas = document.getElementById('overlayCanvas');
-        const overlayCtx = overlayCanvas.getContext('2d');
 
         let stream = null;
-        let detectionInterval = null;
+        let mediaRecorder = null;
+        let recordedChunks = [];
         let isCameraOpen = false;
-        let isPhotoCaptured = false;
-        let capturedImageBlob = null;
+        let isRecording = false;
+        let isVideoCaptured = false;
+        let capturedVideoBlob = null;
 
         cameraButton.addEventListener('click', async () => {
-            if (isPhotoCaptured) {
+            if (isVideoCaptured) {
+                // If video is already captured, the button acts as a "Retake" button
                 window.location.reload();
             } else if (isCameraOpen) {
-                capturePhoto();
+                // If camera is open, start recording
+                startRecording();
             } else {
+                // If camera is closed, open it
                 await openCamera();
             }
         });
@@ -324,16 +327,15 @@
                 stream.getTracks().forEach(track => track.stop());
                 stream = null;
             }
-            clearInterval(detectionInterval);
             video.classList.add('hidden');
             photoCanvas.classList.add('hidden');
-            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
             placeholder.classList.remove('hidden');
             closeCameraBtn.classList.add('hidden');
             cameraButton.innerHTML = `<ion-icon name="camera-outline" class="text-xl"></ion-icon><span>Open Camera</span>`;
             isCameraOpen = false;
-            isPhotoCaptured = false;
-            capturedImageBlob = null;
+            isRecording = false;
+            isVideoCaptured = false;
+            capturedVideoBlob = null;
         });
 
         async function openCamera() {
@@ -343,11 +345,6 @@
 
                 await new Promise(resolve => {
                     video.onloadedmetadata = () => {
-                        video.play();
-                        overlayCanvas.width = video.videoWidth;
-                        overlayCanvas.height = video.videoHeight;
-                        photoCanvas.width = video.videoWidth;
-                        photoCanvas.height = video.videoHeight;
                         resolve();
                     };
                 });
@@ -355,9 +352,8 @@
                 video.classList.remove('hidden');
                 placeholder.classList.add('hidden');
                 isCameraOpen = true;
-                cameraButton.innerHTML = `<ion-icon name="camera-outline" class="text-xl"></ion-icon><span>Capture Photo</span>`;
+                cameraButton.innerHTML = `<ion-icon name="radio-button-on-outline" class="text-xl text-red-500"></ion-icon><span>Start Recording</span>`;
                 closeCameraBtn.classList.remove('hidden');
-                detectionInterval = setInterval(detectFaceInStream, 500);
             } catch (err) {
                 console.error("Error accessing camera: ", err);
                 alert("Could not access camera. Please ensure you have a webcam and grant permission.");
@@ -365,64 +361,54 @@
         }
 
         function capturePhoto() {
-            if (!isCameraOpen || !video.videoWidth) {
-                alert("Camera is not ready yet. Please wait a moment.");
-                return;
-            }
-            isPhotoCaptured = true;
-            clearInterval(detectionInterval);
-            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-            photoCtx.drawImage(video, 0, 0, photoCanvas.width, photoCanvas.height);
-
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                stream = null;
-            }
-
-            photoCanvas.toBlob(blob => {
-                capturedImageBlob = blob;
-            }, 'image/jpeg', 0.95);
-
-            video.classList.add('hidden');
-            photoCanvas.classList.remove('hidden');
-            cameraButton.innerHTML = `<ion-icon name="refresh-outline" class="text-xl"></ion-icon><span>Retake Photo</span>`;
-            closeCameraBtn.classList.add('hidden');
+            // This function is no longer used for video, but kept for reference
         }
 
-        async function detectFaceInStream() {
-            if (!isCameraOpen || isPhotoCaptured) return;
-
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = video.videoWidth;
-            tempCanvas.height = video.videoHeight;
-            tempCanvas.getContext('2d').drawImage(video, 0, 0);
-
-            const blob = await new Promise(r => tempCanvas.toBlob(r, 'image/jpeg'));
-            const formData = new FormData();
-            formData.append('frame', blob, 'detect.jpg');
-
-            const res = await fetch('/detect_face', { method: 'POST', body: formData });
-            const data = await res.json();
-
-            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-
-            if (res.ok && data.status === 'success') {
-                const [x, y, w, h] = data.box;
-                overlayCtx.strokeStyle = '#34d399';
-                overlayCtx.lineWidth = 3;
-                overlayCtx.strokeRect(x, y, w, h);
+        function startRecording() {
+            if (!isCameraOpen || isRecording) {
+                return;
             }
+            isRecording = true;
+            recordedChunks = [];
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                capturedVideoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+                isVideoCaptured = true;
+                isRecording = false;
+                stream.getTracks().forEach(track => track.stop());
+                video.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+                placeholder.innerHTML = `<ion-icon name="checkmark-circle-outline" class="text-4xl text-green-500 mb-3"></ion-icon><p class="text-gray-600 font-medium">Video Captured!</p>`;
+                cameraButton.innerHTML = `<ion-icon name="refresh-outline" class="text-xl"></ion-icon><span>Record Again</span>`;
+                closeCameraBtn.classList.add('hidden');
+            };
+
+            mediaRecorder.start();
+            cameraButton.disabled = true;
+            cameraButton.innerHTML = `<span>Recording... (5s)</span>`;
+
+            setTimeout(() => {
+                mediaRecorder.stop();
+                cameraButton.disabled = false;
+            }, 5000); // Record for 5 seconds
         }
 
         registrationForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!isPhotoCaptured || !capturedImageBlob) {
-                alert("No photo captured. Please open the camera and capture a photo.");
+            if (!isVideoCaptured || !capturedVideoBlob) {
+                alert("No video recorded. Please open the camera and record a 5-second video.");
                 return;
             }
 
             const formData = new FormData(registrationForm);
-            formData.append('face', capturedImageBlob, 'face.jpg');
+            formData.append('video', capturedVideoBlob, 'video.webm');
 
             const res = await fetch('/register', { method: 'POST', body: formData });
             const data = await res.json();

@@ -82,6 +82,32 @@ def mark_attendance(prn):
     else:
         print(f"ℹ️ PRN: {prn_str} already marked today.")
 
+def extract_faces_from_video(video_path, output_dir, prn):
+    """Extracts face frames from a video and saves them as JPGs."""
+    cap = cv2.VideoCapture(video_path)
+    frame_count = 0
+    saved_faces = 0
+
+    while cap.isOpened() and saved_faces < 20: # Limit to 20 faces to be efficient
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        frame_count += 1
+        # Take one frame every 5 frames (~0.2 sec at 25 FPS) to get variety
+        if frame_count % 5 != 0:
+            continue
+
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+        for (x, y, w, h) in faces:
+            cropped_face = frame[y:y + h, x:x + w]
+            face_path = os.path.join(output_dir, f"{prn}_{saved_faces}.jpg")
+            cv2.imwrite(face_path, cropped_face)
+            saved_faces += 1
+
+    cap.release()
+    print(f"✅ Extracted {saved_faces} faces for PRN {prn}")
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -94,7 +120,7 @@ def register():
         phone = request.form.get('phone')
         department = request.form.get('department')
         semester = request.form.get('semester')
-        file = request.files.get('face') # This will now come from the webcam capture
+        file = request.files.get('video') # Changed from 'face' to 'video'
 
         if not all([prn, full_name, email, phone, department, semester, file]):
             return jsonify({"status": "error", "message": "Missing form data."}), 400
@@ -128,9 +154,15 @@ def register():
         faces_dir = os.path.join(BASE_DIR, "faces")
         os.makedirs(faces_dir, exist_ok=True)
         
-        filename = os.path.join(faces_dir, f"{prn}.jpg")
-        # Save the new image, overwriting if it exists (for updates)
-        file.save(filename) 
+        # --- Save video and extract faces ---
+        video_path = os.path.join(faces_dir, f"{prn}.mp4")
+        file.save(video_path)
+
+        # Extract multiple faces from the video and save them as JPGs
+        extract_faces_from_video(video_path, faces_dir, prn)
+
+        # Clean up the temporary video file
+        os.remove(video_path)
 
         # --- RETRAIN AND RELOAD THE MODEL ---
         retrain_model()  # This saves the new models to disk
@@ -147,7 +179,8 @@ def retrain_model():
 
     for filename in os.listdir(faces_dir):
         if filename.endswith(".jpg"):
-            prn = os.path.splitext(filename)[0]
+            # Correctly extract PRN from filenames like '12345_0.jpg'
+            prn = os.path.splitext(filename)[0].split('_')[0]
             img_path = os.path.join(faces_dir, filename)
             img = cv2.imread(img_path)
             if img is None:
@@ -158,17 +191,18 @@ def retrain_model():
             X.append(emb)
             y.append(prn)
 
-    # SVM requires at least 2 different classes (people) to train
-    if len(set(y)) < 2:
-        print(f"⚠️ Found {len(X)} face(s) for {len(set(y))} unique person/people. Need at least 2 for training. Skipping.")
-        return
-
     from sklearn.svm import SVC # Import here as it's only used for retraining
     from sklearn.preprocessing import LabelEncoder
 
     le = LabelEncoder()
     y_encoded = le.fit_transform(y)
     svm_model = SVC(kernel='linear', probability=True)
+
+    # This is the correct place for the check - after all images are processed.
+    if len(set(y_encoded)) < 2:
+        print(f"⚠️ Found {len(X)} face(s) for {len(set(y_encoded))} unique person/people. Need at least 2 for training. Skipping.")
+        return
+
     svm_model.fit(X, y_encoded)
 
     joblib.dump(svm_model, os.path.join(BASE_DIR, "models", "svm_face_recognition.joblib"))
@@ -208,20 +242,29 @@ def scan():
             # ✅ Get embedding from FaceNet
             emb = embedder.embeddings([face_resized])[0]
 
-            # ✅ Predict label
-            pred = svm_model.predict([emb])[0]
-            person_prn = label_encoder.inverse_transform([pred])[0]
+            # ✅ Predict label with confidence
+            probs = svm_model.predict_proba([emb])[0]
+            best_class_index = np.argmax(probs)
+            confidence = probs[best_class_index]
+            person_prn = label_encoder.inverse_transform([best_class_index])[0]
+
+            # ✅ Apply threshold to filter unknown faces
+            THRESHOLD = 0.6  # you can adjust between 0.5–0.7 based on performance
+            if confidence < THRESHOLD:
+                person_prn = "Unknown"
 
             # ✅ Fetch full name from students.csv
             # Ensure PRN is read as a string to match the label's data type
             students_df = pd.read_csv(students_path)
             students_df['PRN'] = students_df['PRN'].astype(str)
-            student_record = students_df[students_df['PRN'] == person_prn]
-
-            if not student_record.empty:
-                person_name = student_record.iloc[0]['FullName']
-            else:
+            
+            # We only search for the student if the PRN is not "Unknown"
+            student_record = students_df[students_df['PRN'] == person_prn] if person_prn != "Unknown" else pd.DataFrame()
+            
+            if person_prn == "Unknown" or student_record.empty:
                 person_name = "Unknown"
+            else:
+                person_name = student_record.iloc[0]['FullName']
 
             # ✅ Mark attendance only if known
             if person_name != "Unknown":
